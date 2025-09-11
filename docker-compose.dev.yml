@@ -1,0 +1,13 @@
+version: "3.9"
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: ./apps/frontend/Dockerfile
+    working_dir: /app/frontend
+    command: uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
+    volumes:
+      - ./apps/frontend:/app/frontend
+    ports:
+      - "8000:8000"
