@@ -1,9 +1,11 @@
-from fastapi import FastAPI
-from schemas import Job, JobCreate, JobStatus
+from fastapi import FastAPI, HTTPException, Depends
+from schemas import Job, JobCreate, JobStatus, JobFilters
 from datetime import datetime, timezone
 import uuid
 
 app = FastAPI()
+
+jobs_db = {}  # will be later replaced with a db
 
 @app.get("/health")
 def health():
@@ -21,28 +23,9 @@ def list_models() -> list[str]:
 def create_job(payload: JobCreate) -> Job:
     """
     Create a new job.
-
-    Example:
-        curl -X POST http://localhost:8080/jobs \
-          -H 'Content-Type: application/json' \
-          -d '{"jobName":"example-job","username":"alice","modelId":"distilbert-base-uncased-finetuned-sst-2-english","input":{"text":"I love this!"}}'
-
-    Response:
-        {
-          "id": "fd9263bc-dae8-4004-9fcf-8d83ebf2bf8a",
-          "jobName": "sentiment-analysis",
-          "username": "alice",
-          "modelId": "distilbert-base-uncased-finetuned-sst-2-english",
-          "input": {"text": "I love this!"},
-          "status": "queued",
-          "result": null,
-          "error": null,
-          "createdAt": "2025-09-12T07:19:20.367483Z",
-          "updatedAt": "2025-09-12T07:19:20.367483Z"
-        }
     """
     now = datetime.now(timezone.utc)
-    return Job(
+    job = Job(
         id=str(uuid.uuid4()),
         jobName=payload.jobName,
         username=payload.username,
@@ -54,3 +37,24 @@ def create_job(payload: JobCreate) -> Job:
         createdAt=now,
         updatedAt=now,
     )
+    jobs_db[job.id] = job
+    return job
+
+@app.get("/jobs", response_model=list[Job])
+def list_jobs(filters: JobFilters = Depends(JobFilters)) -> list[Job]:
+    jobs = list(jobs_db.values())
+    if filters.q:
+        jobs = [job for job in jobs if filters.q in job.jobName or filters.q in job.username]
+    if filters.username:
+        jobs = [job for job in jobs if job.username == filters.username]
+    if filters.jobName:
+        jobs = [job for job in jobs if job.jobName == filters.jobName]
+    if filters.status:
+        jobs = [job for job in jobs if job.status == filters.status]
+    return jobs
+
+@app.get("/jobs/{job_id}", response_model=Job)
+def get_job(job_id: str) -> Job:
+    if job_id not in jobs_db:
+        raise HTTPException(status_code=404, detail="Job not found")
+    return jobs_db[job_id]
