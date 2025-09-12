@@ -150,7 +150,18 @@ make_request() {
 extract_json_field() {
     local json="$1"
     local field="$2"
-    echo "$json" | grep -o "\"$field\":\"[^\"]*\"" | cut -d'"' -f4
+    # Handle both quoted strings and unquoted numbers/booleans
+    echo "$json" | grep -o "\"$field\":[^,}]*" | cut -d':' -f2 | sed 's/^[[:space:]]*//; s/[[:space:]]*$//; s/^"//; s/"$//'
+}
+
+# Function to clean up test jobs
+cleanup_test_jobs() {
+    local job_ids=("$@")
+    for job_id in "${job_ids[@]}"; do
+        if [ -n "$job_id" ]; then
+            curl -s -X DELETE "$TEST_BASE_URL/jobs/$job_id" > /dev/null 2>&1
+        fi
+    done
 }
 
 # Function to validate test environment
