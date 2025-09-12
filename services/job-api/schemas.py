@@ -86,8 +86,69 @@ class JobFilters(BaseModel):
     status: Optional[JobStatus] = Field(
         default=None, description="Filter by job status"
     )
-    page: int = Field(default=1, ge=1, description="Page number (1-based)")
-    pageSize: int = Field(default=20, ge=1, le=100, description="Items per page")
+
+    # Page-based pagination (preferred for UIs)
+    page: Optional[int] = Field(default=None, ge=1, description="Page number (1-based)")
+    pageSize: Optional[int] = Field(
+        default=None, ge=1, le=100, description="Items per page"
+    )
+
+    # Offset-based pagination (preferred for APIs)
+    limit: Optional[int] = Field(
+        default=None,
+        ge=-1,
+        le=100,
+        description="Maximum number of items to return. Use -1 for unlimited.",
+    )
+    offset: Optional[int] = Field(
+        default=None, ge=0, description="Number of items to skip"
+    )
+
+    def get_pagination(self) -> tuple[int | None, int]:
+        """
+        Convert pagination parameters to (limit, offset).
+        Returns default values if no pagination specified.
+        Validates that only one pagination approach is used.
+        """
+        default_limit, default_offset = 20, 0
+        page_params = [self.page, self.pageSize]
+        offset_params = [self.limit, self.offset]
+
+        page_provided = any(p is not None for p in page_params)
+        offset_provided = any(p is not None for p in offset_params)
+
+        if page_provided and offset_provided:
+            raise ValueError(
+                "Cannot use both page/pageSize and limit/offset pagination"
+            )
+
+        if page_provided:
+            page = self.page or 1
+            page_size = self.pageSize or default_limit
+            return page_size, (page - 1) * page_size
+
+        elif offset_provided:
+            limit = self.limit
+            offset = self.offset or default_offset
+            if limit == -1:
+                return None, offset
+            elif limit is None:
+                return default_limit, offset
+            return limit, offset
+        else:
+            return default_limit, default_offset
+
+
+class PaginatedJobsResponse(BaseModel):
+    """
+    Response wrapper for paginated job listings.
+    """
+
+    jobs: list[Job]
+    total: int = Field(description="Total number of jobs matching filters")
+    limit: int = Field(description="Number of items per page")
+    offset: int = Field(description="Number of items skipped")
+    hasMore: bool = Field(description="Whether there are more items available")
 
 
 __all__ = ["Job", "JobStatus", "JobCreate", "JobFilters"]
