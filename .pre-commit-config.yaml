@@ -22,10 +22,10 @@ repos:
 
   - repo: local
     hooks:
-      - id: job-api-tests
-        name: Job API Tests
-        entry: services/job-api/test_api.sh
+      - id: test-suite
+        name: Run Test Suite
+        entry: tests/run_tests.sh
         language: script
-        files: ^services/job-api/.*\.(py|toml|yml|yaml|Dockerfile)$
         pass_filenames: false
         verbose: true
+        always_run: true
