@@ -14,11 +14,12 @@ model-infer-app/
 │   ├── run_tests.sh              # Main test runner (orchestration)
 │   ├── utils/
 │   │   └── test_utils.sh         # Common test utilities
-│   ├── components/
-│   │   └── test_job_api.sh       # Job API component tests
-│   └── README.md                # This documentation
+│   └── README.md                 # This documentation
 ├── services/
-│   └── job-api/                  # Service code (no test files)
+│   └── job-api/
+│       ├── main.py               # Service code
+│       ├── test_job_api.sh       # Job API component tests (co-located)
+│       └── ...                   # Other service files
 └── .pre-commit-config.yaml       # Updated to use new test structure
 ```
 
@@ -81,9 +82,9 @@ To add tests for a new component:
 
 1. **Create the test script:**
    ```bash
-   # Create the test file
-   touch tests/components/test_new_component.sh
-   chmod +x tests/components/test_new_component.sh
+   # Create the test file co-located with the service
+   touch services/new-component/test_new_component.sh
+   chmod +x services/new-component/test_new_component.sh
    ```
 
 2. **Structure the test script:**
@@ -124,8 +125,8 @@ To add tests for a new component:
    Edit `tests/run_tests.sh` and add your component to the `COMPONENT_TESTS` array:
    ```bash
    declare -A COMPONENT_TESTS=(
-       ["job-api"]="tests/components/test_job_api.sh"
-       ["new-component"]="tests/components/test_new_component.sh"
+       ["job-api"]="services/job-api/test_job_api.sh"
+       ["new-component"]="services/new-component/test_new_component.sh"
    )
    ```
 

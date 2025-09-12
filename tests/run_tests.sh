@@ -31,7 +31,7 @@ NC='\033[0m' # No Color
 
 # Component test configurations
 declare -A COMPONENT_TESTS=(
-    ["job-api"]="tests/components/test_job_api.sh"
+    ["job-api"]="services/job-api/test_job_api.sh"
 )
 
 # Required services for each component
