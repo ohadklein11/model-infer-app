@@ -30,24 +30,24 @@ cleanup() {
     if [ "$CLEANUP_NEEDED" = true ]; then
         echo -e "\n${YELLOW}Stopping services with make down...${NC}"
         CLEANUP_NEEDED=false  # Prevent double cleanup
-        
+
         # Kill the make process if it's still running
         if [ -n "$MAKE_PID" ]; then
             # First try SIGTERM (graceful)
             kill $MAKE_PID 2>/dev/null
-            
+
             # Give it 3 seconds to terminate gracefully
             local count=0
             while [ $count -lt 3 ] && kill -0 $MAKE_PID 2>/dev/null; do
                 sleep 1
                 count=$((count + 1))
             done
-            
+
             # If still running, force kill with SIGKILL
             if kill -0 $MAKE_PID 2>/dev/null; then
                 kill -9 $MAKE_PID 2>/dev/null
             fi
-            
+
             timeout 5 bash -c "wait $MAKE_PID" 2>/dev/null || true
         fi
         # Run make down in background with timeout to prevent hanging
@@ -56,7 +56,7 @@ cleanup() {
 
         # Wait for make down to complete or timeout
         wait $MAKE_DOWN_PID 2>/dev/null
-        
+
         echo -e "${GREEN}Services stopped and cleaned up.${NC}"
     fi
 }
@@ -73,53 +73,53 @@ check_service() {
 # Function to start the service using Docker Compose
 start_service() {
     echo -e "${YELLOW}Starting Job API service with Docker Compose...${NC}"
-    
+
     # Check if we're in the right directory
     if [ ! -f "Makefile" ] || [ ! -f "docker-compose.dev.yml" ]; then
         echo -e "${RED}Error: Cannot find Makefile or docker-compose.dev.yml${NC}"
         echo "Please run this script from the model-infer-app root directory"
         exit 1
     fi
-    
+
     # Check if make is available
     if ! command -v make &> /dev/null; then
         echo -e "${RED}Error: make command not found${NC}"
         echo "Please install make or use docker compose directly"
         exit 1
     fi
-    
+
     # Check if docker is available
     if ! command -v docker &> /dev/null; then
         echo -e "${RED}Error: docker command not found${NC}"
         echo "Please install Docker"
         exit 1
     fi
-    
+
     # Start the service using make up
     echo "Running: make up"
     make up > /tmp/job-api-test.log 2>&1 &
     MAKE_PID=$!
     CLEANUP_NEEDED=true
-    
+
     echo "Docker Compose started (PID: $MAKE_PID)"
     echo "Waiting for service to be ready..."
-    
+
     # Wait for service to be ready (max 60 seconds for Docker build/start)
     local max_attempts=60
     local attempt=1
-    
+
     while [ $attempt -le $max_attempts ]; do
         if check_service; then
             echo -e "${GREEN}✓ Service is ready!${NC}"
             echo ""
             return 0
         fi
-        
+
         echo -n "."
         sleep 1
         attempt=$((attempt + 1))
     done
-    
+
     echo -e "\n${RED}✗ Service failed to start within 60 seconds${NC}"
     echo "Check the log file: /tmp/job-api-test.log"
     echo "Last few lines of the log:"
@@ -145,7 +145,7 @@ test_endpoint() {
     local endpoint="$3"
     local data="$4"
     local expected_status="$5"
-    
+
     # Make the request
     if [ -n "$data" ]; then
         response=$(curl -s -w "\n%{http_code}" -X "$method" "$BASE_URL$endpoint" \
@@ -154,13 +154,13 @@ test_endpoint() {
     else
         response=$(curl -s -w "\n%{http_code}" -X "$method" "$BASE_URL$endpoint")
     fi
-    
+
     # Split response and status code
     status_code=$(echo "$response" | tail -n1)
     response_body=$(echo "$response" | head -n -1)
-    
+
     TOTAL_TESTS=$((TOTAL_TESTS + 1))
-    
+
     if [ "$status_code" = "$expected_status" ]; then
         echo -e "${GREEN}✓${NC} $test_name"
         PASSED_TESTS=$((PASSED_TESTS + 1))

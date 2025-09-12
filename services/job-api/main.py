@@ -12,6 +12,7 @@ AVAILABLE_MODELS = [
     "distilbert-base-uncased-finetuned-sst-2-english",
 ]
 
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
@@ -29,16 +30,13 @@ def create_job(payload: JobCreate) -> Job:
     """
     if payload.modelId not in AVAILABLE_MODELS:
         raise HTTPException(
-            status_code=422, 
-            detail=f"Invalid modelId '{payload.modelId}'. Available models: {AVAILABLE_MODELS}"
-        )
-    
-    if not payload.input:
-        raise HTTPException(
             status_code=422,
-            detail="Input cannot be empty"
+            detail=f"Invalid modelId '{payload.modelId}'. Available models: {AVAILABLE_MODELS}",
         )
-    
+
+    if not payload.input:
+        raise HTTPException(status_code=422, detail="Input cannot be empty")
+
     now = datetime.now(timezone.utc)
     job = Job(
         id=str(uuid.uuid4()),
@@ -55,11 +53,16 @@ def create_job(payload: JobCreate) -> Job:
     jobs_db[job.id] = job
     return job
 
+
 @app.get("/jobs", response_model=list[Job])
 def list_jobs(filters: JobFilters = Depends(JobFilters)) -> list[Job]:
     jobs = list(jobs_db.values())
     if filters.q:
-        jobs = [job for job in jobs if filters.q in job.jobName or filters.q in job.username]
+        jobs = [
+            job
+            for job in jobs
+            if filters.q in job.jobName or (job.username and filters.q in job.username)
+        ]
     if filters.username:
         jobs = [job for job in jobs if job.username == filters.username]
     if filters.jobName:
@@ -67,6 +70,7 @@ def list_jobs(filters: JobFilters = Depends(JobFilters)) -> list[Job]:
     if filters.status:
         jobs = [job for job in jobs if job.status == filters.status]
     return jobs
+
 
 @app.get("/jobs/{job_id}", response_model=Job)
 def get_job(job_id: str) -> Job:
