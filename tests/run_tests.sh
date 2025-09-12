@@ -7,7 +7,7 @@
 set -e
 
 # Configuration
-BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BASE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 COMPOSE_FILE="docker-compose.dev.yml"
 BASE_URL="http://localhost:8080"
 MAKE_PID=""

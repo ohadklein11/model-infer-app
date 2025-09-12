@@ -26,6 +26,6 @@ repos:
         name: Run Test Suite
         entry: tests/run_tests.sh
         language: script
-        files: ^(services/.*\.(py|toml|yml|yaml|Dockerfile)|docker-compose\..*\.yml|Makefile)$
         pass_filenames: false
         verbose: true
+        always_run: true
