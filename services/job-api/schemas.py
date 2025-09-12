@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 from typing import Any, Optional
 from enum import Enum
@@ -15,12 +15,24 @@ class JobStatus(str, Enum):
 
 class JobCreate(BaseModel):
 	"""Payload used to create a new job via POST /jobs."""
-	jobName: str = Field(description="Job name")
-	username: Optional[str] = Field(default=None, description="Optional username")
-	modelId: str = Field(description="Identifier of the model to run")
+	jobName: str = Field(min_length=1, max_length=100, description="Job name")
+	username: Optional[str] = Field(default=None, max_length=50, description="Optional username")
+	modelId: str = Field(min_length=1, description="Identifier of the model to run")
 	input: Any = Field(description="Input payload for the model")
 
+	@field_validator('jobName')
+	@classmethod
+	def validate_job_name(cls, v):
+		if not v or v.strip() == "":
+			raise ValueError('jobName cannot be empty or whitespace only')
+		return v.strip()
 
+	@field_validator('username')
+	@classmethod
+	def validate_username(cls, v):
+		if v is not None and v.strip() == "":
+			raise ValueError('username cannot be empty or whitespace only')
+		return v.strip() if v else None
 
 
 class Job(BaseModel):
