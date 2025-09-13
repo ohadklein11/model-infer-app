@@ -19,3 +19,6 @@ restart-%:
 
 sh-%:
 	docker compose -f $(COMPOSE_FILE) exec $* sh
+
+test:
+	bash tests/run_tests.sh
