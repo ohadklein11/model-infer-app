@@ -2,3 +2,4 @@ ROADMAP.md
 scripts
 
 __pycache__/
+services/models/**/weights/
