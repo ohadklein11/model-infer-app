@@ -8,7 +8,7 @@ set -e
 
 # Get the script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 # Source common test utilities
 source "$PROJECT_ROOT/tests/utils/test_utils.sh"
@@ -132,7 +132,8 @@ test_endpoint "List jobs with jobName filter" "GET" "/jobs?jobName=sentiment-ana
 
 test_endpoint "List jobs with status filter" "GET" "/jobs?status=queued" "" "200"
 
-test_endpoint "List jobs with text search" "GET" "/jobs?q=test" "" "200"
+# Removed: free-text 'q' search was deprecated for predictability and index usage
+# test_endpoint "List jobs with text search" "GET" "/jobs?q=test" "" "200"
 
 test_endpoint "List jobs with pagination" "GET" "/jobs?page=1&pageSize=10" "" "200"
 
@@ -256,20 +257,7 @@ else
 fi
 
 # Test search functionality
-demo_response=$(make_request "GET" "/jobs?q=test-demo" "")
-demo_total=$(extract_json_field "$demo_response" "total")
-
-TOTAL_TESTS=$((TOTAL_TESTS + 1))
-if [ "$demo_total" -eq 3 ]; then
-    echo -e "${GREEN}✓${NC} Search query 'test-demo' finds 3 jobs"
-    PASSED_TESTS=$((PASSED_TESTS + 1))
-else
-    echo -e "${RED}✗${NC} Search 'test-demo' should find 3 jobs, got $demo_total"
-    FAILED_TESTS=$((FAILED_TESTS + 1))
-fi
-
-# Test search with pagination
-test_endpoint "Search with pagination" "GET" "/jobs?q=test-demo&limit=2&offset=0" "" "200"
+# Removed: q-based search and pagination validations (deprecated)
 
 # Test unlimited results (limit=-1)
 unlimited_response=$(make_request "GET" "/jobs?limit=-1&offset=0" "")

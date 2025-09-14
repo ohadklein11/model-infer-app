@@ -11,21 +11,23 @@ The testing framework is designed to be modular and scalable, with clear separat
 ```
 model-infer-app/
 ├── tests/
-│   ├── run_tests.sh              # Main test runner (orchestration)
+│   ├── run_e2e_tests.sh                # E2E test runner (orchestration)
+│   ├── run_all.sh                      # Runs unit (pytest) + E2E
 │   ├── utils/
-│   │   └── test_utils.sh         # Common test utilities
-│   └── README.md                 # This documentation
+│   │   └── test_utils.sh               # Common test utilities
+│   └── README.md                       # This documentation
 ├── services/
 │   └── job-api/
-│       ├── main.py               # Service code
-│       ├── test_job_api.sh       # Job API component tests (co-located)
-│       └── ...                   # Other service files
-└── .pre-commit-config.yaml       # Updated to use new test structure
+│       ├── main.py                     # Service code
+│       ├── tests/test_repositories.py  # Unit/integration tests for repos
+│       ├── tests/test_e2e.sh       # Job API E2E component tests (co-located)
+│       └── ...                         # Other service files
+└── .pre-commit-config.yaml             # Updated to use new test structure
 ```
 
 ## Components
 
-### 1. Main Test Runner (`run_tests.sh`)
+### 1. E2E Test Runner (`run_e2e_tests.sh`)
 
 The main test runner is responsible for:
 - Service lifecycle management (start/stop Docker services)
@@ -36,13 +38,13 @@ The main test runner is responsible for:
 **Usage:**
 ```bash
 # Run all component tests
-tests/run_tests.sh
+tests/run_e2e_tests.sh
 
 # Run specific components
-tests/run_tests.sh job-api
+tests/run_e2e_tests.sh job-api
 
 # Show help
-tests/run_tests.sh --help
+tests/run_e2e_tests.sh --help
 ```
 
 **Features:**
@@ -70,7 +72,7 @@ Common utilities shared across all component tests:
 
 ### 3. Component Tests
 
-Individual test scripts for each component (e.g., `services/job-api/test_job_api.sh`):
+Individual test scripts for each component (e.g., `services/job-api/tests/test_e2e.sh`):
 - Focus only on testing the component's functionality
 - Use common utilities from `test_utils.sh`
 - No service management logic
@@ -121,11 +123,11 @@ To add tests for a new component:
    fi
    ```
 
-3. **Register the component in the main runner:**
-   Edit `tests/run_tests.sh` and add your component to the `COMPONENT_TESTS` array:
+3. **Register the component in the E2E runner:**
+   Edit `tests/run_e2e_tests.sh` and add your component to the `COMPONENT_TESTS` array:
    ```bash
    declare -A COMPONENT_TESTS=(
-       ["job-api"]="services/job-api/test_job_api.sh"
+       ["job-api"]="services/job-api/tests/test_e2e.sh"
        ["new-component"]="services/new-component/test_new_component.sh"
    )
    ```
@@ -140,13 +142,31 @@ The test framework uses these environment variables:
 - `TEST_BASE_URL` - Base URL for API testing (default: http://localhost:8080)
 - `TEST_SKIP_SERVICE_MANAGEMENT` - Set to "true" to skip service startup (used by main runner)
 
+## Running All Tests
+
+Preferred single entry point:
+
+```bash
+make test
+```
+
+This runs:
+- Unit/integration tests with pytest (fast, no Docker): `services/job-api/tests/test_repositories.py`
+- E2E tests via Docker Compose (component-level): `tests/run_e2e_tests.sh`
+
+Alternatively, you can call the orchestrator directly:
+
+```bash
+tests/run_all.sh
+```
+
 ## Integration with Pre-commit
 
 The test suite is integrated with pre-commit hooks:
 ```yaml
 - id: test-suite
   name: Run Test Suite
-  entry: tests/run_tests.sh
+  entry: tests/run_e2e_tests.sh
   language: script
   files: ^(services/.*\.(py|toml|yml|yaml|Dockerfile)|docker-compose\..*\.yml|Makefile)$
   pass_filenames: false
