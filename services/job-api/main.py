@@ -1,19 +1,60 @@
 from fastapi import FastAPI, HTTPException, Depends
 from schemas import Job, JobCreate, JobFilters, PaginatedJobsResponse
-from repository import InMemoryJobRepo, JobRepository
+from repository import InMemoryJobRepo, MongoJobRepo, JobRepository
 from contextlib import asynccontextmanager
+import os
+import logging
 
 job_repo: JobRepository = None
+
+
+def create_repository() -> JobRepository:
+    """Create and return the appropriate repository based on environment variables."""
+    repo_backend = os.getenv("REPO_BACKEND", "memory").lower()
+
+    if repo_backend == "mongo":
+        mongo_url = os.getenv("MONGO_URL")
+        if not mongo_url:
+            raise ValueError(
+                "MONGO_URL environment variable is required when REPO_BACKEND=mongo"
+            )
+        return MongoJobRepo(mongo_url)
+    elif repo_backend == "memory":
+        return InMemoryJobRepo()
+    else:
+        raise ValueError(
+            f"Unsupported REPO_BACKEND: {repo_backend}. Supported values: memory, mongo"
+        )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Handle application startup and shutdown."""
     global job_repo
-    job_repo = InMemoryJobRepo()
-    await job_repo.initialize()
-    yield  # will return when the context manager is exited
-    await job_repo.cleanup()
+
+    # Configure logging
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
+
+    try:
+        # Create repository based on environment configuration
+        job_repo = create_repository()
+        logger.info(f"Using repository: {type(job_repo).__name__}")
+
+        # Initialize the repository
+        await job_repo.initialize()
+        logger.info("Repository initialized successfully")
+
+        yield  # Application runs here
+
+    except Exception as e:
+        logger.error(f"Failed to initialize application: {e}")
+        raise
+    finally:
+        # Cleanup resources
+        if job_repo:
+            await job_repo.cleanup()
+            logger.info("Repository cleanup completed")
 
 
 app = FastAPI(lifespan=lifespan)
@@ -25,8 +66,18 @@ AVAILABLE_MODELS = [
 
 
 @app.get("/health")
-def health():
-    return {"status": "ok"}
+async def health():
+    """Health check endpoint that includes repository status."""
+    repo_healthy = await job_repo.health_check() if job_repo else False
+    status = "ok" if repo_healthy else "degraded"
+
+    return {
+        "status": status,
+        "repository": {
+            "type": type(job_repo).__name__ if job_repo else "none",
+            "healthy": repo_healthy,
+        },
+    }
 
 
 @app.get("/models")

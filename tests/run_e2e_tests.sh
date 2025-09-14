@@ -1,8 +1,9 @@
 #!/bin/bash
 
-# Main Test Suite Runner
-# This script orchestrates all component tests, handles service lifecycle,
+# E2E Test Suite Runner (component-level)
+# This script orchestrates component tests, handles service lifecycle,
 # and aggregates test results from all components.
+# Note: Unit/integration tests (pytest) are run by tests/run_all.sh
 
 set -e
 
@@ -31,7 +32,7 @@ NC='\033[0m' # No Color
 
 # Component test configurations
 declare -A COMPONENT_TESTS=(
-    ["job-api"]="services/job-api/test_job_api.sh"
+    ["job-api"]="services/job-api/tests/test_e2e.sh"
 )
 
 # Required services for each component

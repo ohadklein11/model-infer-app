@@ -22,10 +22,16 @@ repos:
 
   - repo: local
     hooks:
-      - id: test-suite
-        name: Run Test Suite
-        entry: tests/run_tests.sh
+      - id: e2e test-suite
+        name: Run E2E Test Suite
+        entry: tests/run_e2e_tests.sh
         language: script
         pass_filenames: false
         verbose: true
         always_run: true
+      - id: job-api-unit-tests
+        name: Run job-api unit tests
+        entry: sh -c 'export PATH="$HOME/.local/bin:$PATH" && cd services/job-api && uv run pytest -q'
+        language: system
+        pass_filenames: false
+        files: ^services/job-api/

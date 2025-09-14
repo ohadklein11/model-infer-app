@@ -78,9 +78,6 @@ class JobFilters(BaseModel):
     Query parameters for listing jobs.
     """
 
-    q: Optional[str] = Field(
-        default=None, description="Free text search over name and username"
-    )
     username: Optional[str] = Field(default=None, description="Filter by username")
     jobName: Optional[str] = Field(default=None, description="Filter by job name")
     status: Optional[JobStatus] = Field(
