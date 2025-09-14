@@ -32,6 +32,7 @@ help:
 	echo "  REPO=$(REPO)"
 
 up:
+	$(DC_INFRA) up -d
 	$(COMPOSE_ENV) $(DC) up --build
 
 # Convenience shortcuts
