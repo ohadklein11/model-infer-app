@@ -36,11 +36,6 @@ declare -A COMPONENT_TESTS=(
     ["distilbert"]="services/models/distilbert/tests/test_e2e.sh"
 )
 
-# Required services for each component
-declare -A COMPONENT_SERVICES=(
-    ["job-api"]="up"
-    ["distilbert"]="up-models"
-)
 
 echo "🧪 Test Suite Runner"
 echo "==================="
