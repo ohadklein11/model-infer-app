@@ -35,3 +35,18 @@ services:
       - model-infer-app-net
     ports:
       - "8091:8091"
+  vqa:
+    build:
+      context: ./services/models
+      dockerfile: vqa/Dockerfile
+    working_dir: /app
+    command: uv run uvicorn main:app --host 0.0.0.0 --port 8092
+    environment:
+      - MODEL_ID=${MODEL_ID:-dandelin/vilt-b32-finetuned-vqa}
+      - TORCH_DEVICE=${TORCH_DEVICE:-cpu}
+      - MAX_INPUT_TOKENS=${MAX_INPUT_TOKENS:-512}
+      - REQUEST_TIMEOUT_SECONDS=${REQUEST_TIMEOUT_SECONDS:-10}
+    networks:
+      - model-infer-app-net
+    ports:
+      - "8092:8092"
