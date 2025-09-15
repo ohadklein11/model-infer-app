@@ -60,6 +60,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 # Extract models list to a constant for reuse
+# TODO currently hard-coded, will orchestrate later
 AVAILABLE_MODELS = [
     "distilbert-base-uncased-finetuned-sst-2-english",
 ]
