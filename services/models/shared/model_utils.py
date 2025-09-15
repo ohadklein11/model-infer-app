@@ -2,6 +2,7 @@ import os
 import re
 import logging
 from typing import Any, Callable, Optional, Tuple
+# NOTE: image helper imports were removed; keep core model utils lean
 
 
 def _sanitize_model_id(model_id: str) -> str:

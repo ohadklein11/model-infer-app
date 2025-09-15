@@ -9,6 +9,7 @@ echo "======================================="
 (cd "$BASE_DIR/services/job-api" && uv run pytest -q)
 echo
 (cd "$BASE_DIR/services/models/distilbert" && uv run pytest -q)
+(cd "$BASE_DIR/services/models/vqa" && uv run pytest -q)
 
 echo
 echo "🧪 Running end-to-end component tests (bash)"

@@ -1,7 +1,9 @@
 import os
 import sys
 import logging
+import re
 import asyncio
+import torch
 from typing import Tuple, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.concurrency import run_in_threadpool
@@ -12,6 +14,16 @@ _CURRENT_DIR = Path(__file__).parent
 _PARENT_DIR = _CURRENT_DIR.parent
 if str(_PARENT_DIR) not in sys.path:
     sys.path.insert(0, str(_PARENT_DIR))
+
+# Configure per-service logger once at module import
+service_logger = logging.getLogger("models.distilbert")
+if not service_logger.handlers:
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter("%(levelname)s - %(name)s - %(message)s")
+    handler.setFormatter(formatter)
+    service_logger.addHandler(handler)
+service_logger.setLevel(logging.INFO)
 
 MODEL_ID = os.getenv("MODEL_ID", "distilbert-base-uncased-finetuned-sst-2-english")
 TORCH_DEVICE = os.getenv("TORCH_DEVICE", "cpu").lower()
@@ -32,21 +44,21 @@ model_ready = False
 
 
 def load_model(model_id: str) -> Tuple[Any, Any]:
-    from shared.model_utils import load_model as load_generic_model
+    """Load DistilBERT model with simple local state_dict caching."""
     from transformers import (
         AutoConfig,
         AutoTokenizer,
         AutoModelForSequenceClassification,
     )
-    service_logger = logging.getLogger("models.distilbert")
 
-    model, tokenizer = load_generic_model(
-        model_id,
+    from shared.model_utils import load_model as load_model_shared
+    model, tokenizer = load_model_shared(model_id,
         model_from_pretrained=AutoModelForSequenceClassification.from_pretrained,
         config_from_pretrained=AutoConfig.from_pretrained,
         model_from_config=AutoModelForSequenceClassification.from_config,
         processor_from_pretrained=AutoTokenizer.from_pretrained,
         weights_dir=os.path.join(_CURRENT_DIR, "weights"),
+        save_weights=True,
         logger=service_logger,
     )
     return model, tokenizer
@@ -56,17 +68,7 @@ def load_model(model_id: str) -> Tuple[Any, Any]:
 async def lifespan(_app: FastAPI):
     global sentiment_pipeline, tokenizer_ref, model_ready
     from transformers import pipeline  # Lazy import
-    import torch
 
-    # Configure per-service logger
-    service_logger = logging.getLogger("models.distilbert")
-    if not service_logger.handlers:
-        handler = logging.StreamHandler(sys.stdout)
-        handler.setLevel(logging.INFO)
-        formatter = logging.Formatter("%(levelname)s - %(name)s - %(message)s")
-        handler.setFormatter(formatter)
-        service_logger.addHandler(handler)
-    service_logger.setLevel(logging.INFO)
 
     model, tokenizer = load_model(MODEL_ID)
 
@@ -114,7 +116,7 @@ try:
     )
 except Exception:
     # Never fail startup if metrics wiring has an issue
-    logging.getLogger("models.distilbert").warning(
+    service_logger.warning(
         "failed to set up basic metrics", exc_info=True
     )
 
