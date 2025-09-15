@@ -33,11 +33,13 @@ NC='\033[0m' # No Color
 # Component test configurations
 declare -A COMPONENT_TESTS=(
     ["job-api"]="services/job-api/tests/test_e2e.sh"
+    ["distilbert"]="services/models/distilbert/tests/test_e2e.sh"
 )
 
 # Required services for each component
 declare -A COMPONENT_SERVICES=(
     ["job-api"]="up"
+    ["distilbert"]="up-models"
 )
 
 echo "🧪 Test Suite Runner"
@@ -96,6 +98,7 @@ check_service() {
 # Function to start services
 start_services() {
     local service_cmd="$1"
+    local wait_seconds="${SERVICE_WAIT_SECONDS:-30}"
 
     echo -e "${YELLOW}🚀 Starting services with Docker Compose...${NC}"
 
@@ -122,10 +125,10 @@ start_services() {
     CLEANUP_NEEDED=true
 
     echo "Docker Compose started (PID: $MAKE_PID)"
-    echo "Waiting for services to be ready..."
+    echo "Waiting for services to be ready (timeout: ${wait_seconds}s)..."
 
-    # Wait for services to be ready (max 60 seconds)
-    local max_attempts=60
+    # Wait for services to be ready
+    local max_attempts=$wait_seconds
     local attempt=1
 
     while [ $attempt -le $max_attempts ]; do
@@ -140,7 +143,7 @@ start_services() {
         attempt=$((attempt + 1))
     done
 
-    echo -e "\n${RED}❌ Services failed to start within 60 seconds${NC}"
+    echo -e "\n${RED}❌ Services failed to start within ${wait_seconds} seconds${NC}"
     echo "Check the log file: $LOG_FILE"
     echo "Last few lines of the log:"
     tail -20 "$LOG_FILE"
@@ -152,6 +155,7 @@ run_component_test() {
     local component="$1"
     local test_script="$2"
     local full_test_path="$BASE_DIR/$test_script"
+    local wait_seconds="${SERVICE_WAIT_SECONDS:-30}"
 
     TOTAL_COMPONENTS=$((TOTAL_COMPONENTS + 1))
 
@@ -170,13 +174,37 @@ run_component_test() {
         chmod +x "$full_test_path"
     fi
 
+    # Determine per-component base URL
+    local component_base_url="$BASE_URL"
+    if [ "$component" = "distilbert" ]; then
+        component_base_url="http://localhost:8091"
+    fi
+
+    # Ensure the specific component is healthy before running its tests
+    echo "Waiting for $component to be healthy at $component_base_url/health (timeout: ${wait_seconds}s)..."
+    local attempt=1
+    while [ $attempt -le $wait_seconds ]; do
+        if curl -s "$component_base_url/health" > /dev/null 2>&1; then
+            echo -e "${GREEN}Ready${NC}"
+            break
+        fi
+        echo -n "."
+        sleep 1
+        attempt=$((attempt + 1))
+    done
+    if [ $attempt -gt $wait_seconds ]; then
+        echo -e "\n${RED}❌ $component did not become ready in ${wait_seconds}s${NC}"
+        FAILED_COMPONENTS=$((FAILED_COMPONENTS + 1))
+        return 1
+    fi
+
     # Run the test script and capture its output and exit code
     echo -e "${YELLOW}Running tests for $component...${NC}"
     local test_output
     local test_exit_code
 
-    # Set environment variables for the test script
-    export TEST_BASE_URL="$BASE_URL"
+    # Set environment variables for the test script (per-component base URL)
+    export TEST_BASE_URL="$component_base_url"
     export TEST_SKIP_SERVICE_MANAGEMENT="true"
 
     if test_output=$("$full_test_path" 2>&1); then

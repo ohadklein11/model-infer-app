@@ -20,3 +20,17 @@ services:
       - model-infer-app-net
     ports:
       - "8080:8080"
+  distilbert:
+    build:
+      context: ./services/models
+      dockerfile: distilbert/Dockerfile
+    working_dir: /app
+    command: uv run uvicorn main:app --host 0.0.0.0 --port 8091
+    environment:
+      - TORCH_DEVICE=${TORCH_DEVICE:-cpu}
+      - MAX_INPUT_TOKENS=${MAX_INPUT_TOKENS:-512}
+      - REQUEST_TIMEOUT_SECONDS=${REQUEST_TIMEOUT_SECONDS:-10}
+    networks:
+      - model-infer-app-net
+    ports:
+      - "8091:8091"

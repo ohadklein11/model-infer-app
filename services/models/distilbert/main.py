@@ -7,12 +7,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.concurrency import run_in_threadpool
 from schemas import PredictRequest, PredictResponse
 from pathlib import Path
+from contextlib import asynccontextmanager
 _CURRENT_DIR = Path(__file__).parent
 _PARENT_DIR = _CURRENT_DIR.parent
 if str(_PARENT_DIR) not in sys.path:
     sys.path.insert(0, str(_PARENT_DIR))
-
-app = FastAPI()
 
 MODEL_ID = os.getenv("MODEL_ID", "distilbert-base-uncased-finetuned-sst-2-english")
 TORCH_DEVICE = os.getenv("TORCH_DEVICE", "cpu").lower()
@@ -33,7 +32,7 @@ model_ready = False
 
 
 def load_model(model_id: str) -> Tuple[Any, Any]:
-    from utils import load_model as load_generic_model
+    from shared.model_utils import load_model as load_generic_model
     from transformers import (
         AutoConfig,
         AutoTokenizer,
@@ -53,8 +52,8 @@ def load_model(model_id: str) -> Tuple[Any, Any]:
     return model, tokenizer
 
 
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
     global sentiment_pipeline, tokenizer_ref, model_ready
     from transformers import pipeline  # Lazy import
     import torch
@@ -93,6 +92,16 @@ async def startup_event():
     tokenizer_ref = tokenizer
     _ = sentiment_pipeline("Hello world!")
     model_ready = True
+
+    try:
+        yield
+    finally:
+        # Best-effort cleanup
+        sentiment_pipeline = None
+        tokenizer_ref = None
+        model_ready = False
+
+app = FastAPI(lifespan=lifespan)
 
 @app.get("/health")
 async def health():
