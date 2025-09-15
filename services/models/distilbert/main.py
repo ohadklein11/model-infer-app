@@ -103,6 +103,21 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# Attach basic metrics and structured request logging via shared module
+try:
+    from shared.metrics import setup_basic_metrics  # type: ignore
+    _metrics = setup_basic_metrics(
+        app,
+        model_id=MODEL_ID,
+        service_name="models.distilbert",
+        metrics_path="/metrics",
+    )
+except Exception:
+    # Never fail startup if metrics wiring has an issue
+    logging.getLogger("models.distilbert").warning(
+        "failed to set up basic metrics", exc_info=True
+    )
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "modelReady": model_ready}

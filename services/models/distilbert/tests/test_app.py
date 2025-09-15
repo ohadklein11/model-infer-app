@@ -117,3 +117,34 @@ def test_predict_timeout_504(monkeypatch: pytest.MonkeyPatch):
     with TestClient(distil_main.app) as c:
         resp = c.post("/predict", json={"text": "I love timeouts"})
         assert resp.status_code == 504
+
+
+def test_metrics_counts_and_avg_latency(client: TestClient):
+    # Warmup call to ensure model is ready and metrics middleware installed
+    resp = client.get("/health")
+    assert resp.status_code == 200
+
+    # Perform multiple predictions with varying latencies (fake pipeline is fast)
+    n = 3
+    for i in range(n):
+        r = client.post("/predict", json={"text": f"hello {i}"})
+        assert r.status_code == 200
+
+    # Fetch metrics
+    m = client.get("/metrics")
+    assert m.status_code == 200
+    data = m.json()
+    # totalRequests should be at least the number of requests we made here
+    assert data["totalRequests"] >= n + 1  # +1 for /health
+    assert data["successful"] >= n + 1
+    assert data["errors"] >= 0
+    assert isinstance(data["avgLatencyMs"], (int, float))
+    assert data["avgLatencyMs"] >= 0.0
+    assert isinstance(data["uptimeSeconds"], (int, float))
+
+
+def test_request_id_header_present(client: TestClient):
+    r = client.post("/predict", json={"text": "hello"})
+    assert r.status_code == 200
+    # Middleware should add x-request-id
+    assert "x-request-id" in r.headers
