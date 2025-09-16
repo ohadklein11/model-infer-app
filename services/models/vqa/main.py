@@ -160,14 +160,22 @@ async def predict(request: PredictRequest):
         if req.imageBase64:
             try:
                 from shared import decode_base64_image_to_pil, prepare_image_min_size_rgb
-                img, image_bytes = decode_base64_image_to_pil(req.imageBase64)
+                out = decode_base64_image_to_pil(req.imageBase64)
+                if isinstance(out, tuple):
+                    img, image_bytes = out
+                else:
+                    img, image_bytes = out, None
                 image_input = prepare_image_min_size_rgb(img)
             except Exception:
                 raise HTTPException(status_code=422, detail="invalid imageBase64 payload")
         elif req.imageUrl:
             try:
                 from shared import download_image_to_pil, prepare_image_min_size_rgb
-                img, image_bytes = download_image_to_pil(req.imageUrl, timeout_seconds=10.0)
+                out = download_image_to_pil(req.imageUrl, timeout_seconds=10.0)
+                if isinstance(out, tuple):
+                    img, image_bytes = out
+                else:
+                    img, image_bytes = out, None
                 image_input = prepare_image_min_size_rgb(img)
             except Exception:
                 raise HTTPException(status_code=422, detail="failed to download imageUrl")
