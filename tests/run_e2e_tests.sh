@@ -35,6 +35,7 @@ declare -A COMPONENT_TESTS=(
     ["job-api"]="services/job-api/tests/test_e2e.sh"
     ["distilbert"]="services/models/distilbert/tests/test_e2e.sh"
     ["vqa"]="services/models/vqa/tests/test_e2e.sh"
+    ["yolo"]="services/models/yolo/tests/test_e2e.sh"
 )
 
 
@@ -176,6 +177,8 @@ run_component_test() {
         component_base_url="http://localhost:8091"
     elif [ "$component" = "vqa" ]; then
         component_base_url="http://localhost:8092"
+    elif [ "$component" = "yolo" ]; then
+        component_base_url="http://localhost:8093"
     fi
 
     # Ensure the specific component is healthy before running its tests
