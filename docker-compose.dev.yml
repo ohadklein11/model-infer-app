@@ -1,3 +1,7 @@
+# This is the docker-compose file for the development environment.
+# It is used to run the application in a development environment.
+# It is run by the Makefile.
+
 version: "3.9"
 name: model-infer-app
 

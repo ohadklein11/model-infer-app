@@ -1,3 +1,7 @@
+# This is the docker-compose file for the infrastructure.
+# It is used to run the infrastructure for the application.
+# It is run by the Makefile.
+
 version: "3.9"
 name: model-infer-infra
 
