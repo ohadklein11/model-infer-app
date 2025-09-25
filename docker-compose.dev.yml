@@ -77,6 +77,17 @@ services:
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_NODE_ID: 1
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
       CLUSTER_ID: LV8JJ6IQSB6PCzb7bIMZig
     networks:
       - model-infer-app-net
+  kafka-init:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on:
+      - kafka
+    volumes:
+      - ./scripts/init-kafka.sh:/init-kafka.sh
+    command: /init-kafka.sh
+    networks:
+      - model-infer-app-net
+    restart: "no"
