@@ -36,7 +36,9 @@ help:
 	echo "  REPO=$(REPO)"
 
 up:
+ifeq ($(REPO),mongo)
 	$(DC_INFRA) up -d
+endif
 	$(COMPOSE_ENV) $(DC) up --build
 
 # Convenience shortcuts
