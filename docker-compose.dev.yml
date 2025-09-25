@@ -1,3 +1,7 @@
+# This is the docker-compose file for the development environment.
+# It is used to run the application in a development environment.
+# It is run by the Makefile.
+
 version: "3.9"
 name: model-infer-app
 
@@ -60,3 +64,19 @@ services:
       - model-infer-app-net
     ports:
       - "8093:8093"
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_KRAFT_BROKER_ID: 1
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_NODE_ID: 1
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      CLUSTER_ID: LV8JJ6IQSB6PCzb7bIMZig
+    networks:
+      - model-infer-app-net

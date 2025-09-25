@@ -11,3 +11,7 @@ git clone <repository-url>
 cd model-infer-app
 make up
 ```
+Example command - query VQA:
+```
+curl -s -X POST http://localhost:8092/predict -H "Content-Type: application/json" -d '{"imageUrl":"https://picsum.photos/200","question":"What is in the image?"}'
+```

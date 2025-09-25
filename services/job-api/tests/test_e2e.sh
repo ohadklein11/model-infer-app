@@ -22,6 +22,36 @@ echo "=========================="
 echo "Base URL: $TEST_BASE_URL"
 echo ""
 
+# Helper: create job, assert 200, store id in provided var; updates counters
+create_job_and_store_id() {
+    local -n __out_id_var=$1
+    local test_name="$2"
+    local payload="$3"
+    local response=$(curl -s -w "\n%{http_code}" -X POST "${TEST_BASE_URL}/jobs" \
+        -H "Content-Type: application/json" \
+        -d "$payload" || true)
+
+    local status_code=$(echo "$response" | tail -n1)
+    local response_body=$(echo "$response" | head -n -1)
+
+    TOTAL_TESTS=$((TOTAL_TESTS + 1))
+    if [ "$status_code" = "200" ]; then
+        echo -e "${GREEN}✓${NC} ${test_name}"
+        PASSED_TESTS=$((PASSED_TESTS + 1))
+    else
+        echo -e "${RED}✗${NC} ${test_name}"
+        echo "  Expected: 200, Got: $status_code"
+        echo "  Request: POST /jobs"
+        echo "  Data: $payload"
+        if [ -n "$response_body" ] && [ "$response_body" != "" ]; then
+            echo "  Response: $response_body"
+        fi
+        FAILED_TESTS=$((FAILED_TESTS + 1))
+    fi
+
+    __out_id_var=$(extract_json_field "$response_body" "id")
+}
+
 # Validate test environment
 if ! validate_test_environment "$TEST_BASE_URL"; then
     exit 1
@@ -45,17 +75,21 @@ test_endpoint "List available models" "GET" "/models" "" "200"
 # 3. VALID JOB CREATION TESTS
 print_test_section "VALID JOB CREATION"
 
-test_endpoint "Create valid job with username" "POST" "/jobs" \
-    '{"jobName": "sentiment-analysis", "username": "alice", "modelId": "distilbert-base-uncased-finetuned-sst-2-english", "input": {"text": "I love this!"}}' \
-    "200"
+first_job_id=""
+second_job_id=""
+third_job_id=""
 
-test_endpoint "Create valid job without username" "POST" "/jobs" \
-    '{"jobName": "text-classification", "modelId": "distilbert-base-uncased-finetuned-sst-2-english", "input": {"text": "This is great!"}}' \
-    "200"
+create_job_and_store_id first_job_id \
+    "Create valid job with username" \
+    '{"jobName": "sentiment-analysis", "username": "alice", "modelId": "distilbert-base-uncased-finetuned-sst-2-english", "input": {"text": "I love this!"}}'
 
-test_endpoint "Create job with non-dict input" "POST" "/jobs" \
-    '{"jobName": "simple-test", "modelId": "distilbert-base-uncased-finetuned-sst-2-english", "input": "simple text input"}' \
-    "200"
+create_job_and_store_id second_job_id \
+    "Create valid job without username" \
+    '{"jobName": "text-classification", "modelId": "distilbert-base-uncased-finetuned-sst-2-english", "input": {"text": "This is great!"}}'
+
+create_job_and_store_id third_job_id \
+    "Create job with non-dict input" \
+    '{"jobName": "simple-test", "modelId": "distilbert-base-uncased-finetuned-sst-2-english", "input": "simple text input"}'
 
 # Store a job ID for later tests
 print_test_section "SETUP FOR RETRIEVAL TESTS"
@@ -339,6 +373,9 @@ fi
 
 # Clean up response validation test job
 cleanup_test_jobs "$response_test_job_id"
+
+# Cleanup any jobs created in the VALID JOB CREATION section
+cleanup_test_jobs "$first_job_id" "$second_job_id" "$third_job_id"
 
 # Print final results and exit with appropriate code
 if print_test_results "$COMPONENT_NAME"; then

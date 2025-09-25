@@ -1,3 +1,7 @@
+# This is the Makefile for the project.
+# It is used to run the application in a development environment.
+# run `make help` to see the available commands.
+
 COMPOSE_FILE=docker-compose.dev.yml
 REPO ?= mongo
 DC = docker compose -f $(COMPOSE_FILE)
@@ -26,13 +30,15 @@ help:
 	echo "  make up [REPO=mongo|memory]" && \
 	echo "\nInfra:" && \
 	echo "  make infra-up     # start Mongo and infra" && \
-	echo "  make infra-down   # stop infra"
+	echo "  make infra-down   # stop infra" && \
 	echo "\nCurrent defaults:" && \
 	echo "  COMPOSE_FILE=$(COMPOSE_FILE)" && \
 	echo "  REPO=$(REPO)"
 
 up:
+ifeq ($(REPO),mongo)
 	$(DC_INFRA) up -d
+endif
 	$(COMPOSE_ENV) $(DC) up --build
 
 # Convenience shortcuts
